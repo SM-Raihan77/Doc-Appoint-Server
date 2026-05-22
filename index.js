@@ -25,7 +25,7 @@ const client = new MongoClient(uri, {
 
 
 
-const JWKS = createRemoteJWKSet(new URL('http://localhost:3000/api/auth/jwks'));
+const JWKS = createRemoteJWKSet(new URL(`${process.env.CLIENT_URL}/api/auth/jwks`));
 
 const verifyToken = async (req, res, next) => {
   const authHeader = req?.headers.authorization;
@@ -39,7 +39,7 @@ const verifyToken = async (req, res, next) => {
 
   try {
     const { payload } = await jwtVerify(token, JWKS);
-    console.log(payload);
+    // console.log(payload);
     next();
   } catch (error) {
     return res.status(403).json({ message: "Forbidden" });
@@ -52,9 +52,9 @@ const verifyToken = async (req, res, next) => {
 async function run() {
     try {
         // Connect the client to the server	(optional starting in v4.7)
-        await client.connect();
+        // await client.connect();
         // Send a ping to confirm a successful connection
-        await client.db("admin").command({ ping: 1 });
+        // await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
         // Ensures that the client will close when you finish/error
@@ -72,53 +72,51 @@ const appointmentsCollection = db.collection('appointments')
 // create a route for the all doctors with the GET method add query and search param
 
 app.get('/doctors', async (req, res) => {
+
     try {
+
         const sortBy = req.query.sortBy;
-        // const search = req.query.search || "";
+        const search = req.query.search || "";
+
         let query = {};
         let sortQuery = {};
 
-        // console.log("Received sortBy param:", sortBy);
+        // SEARCH ADD HERE
 
-        // Query Sorting
+        if (search) {
 
-        if (sortBy === 'fee_asc') {
-            sortQuery = { fee: 1 };  // কম ফি আগে
-        } else if (sortBy === 'fee_desc') {
-            sortQuery = { fee: -1 }; // বেশি ফি আগে
+            query.name = {
+                $regex: search,
+                $options: "i"
+            };
         }
 
-        // // Search by doctor name
-        // const query = {
-        //     name: {
-        //         $regex: search,
-        //         $options: 'i'
-        //     }
-        // };
-        // oporterta keta dita hobe 
-        // if(search) {
-        //     query.name = { $regex: search, $options: 'i' };
+        // SORTING
 
-        // }
+        if (sortBy === 'fee_asc') {
 
+            sortQuery = { fee: 1 };
 
+        } else if (sortBy === 'fee_desc') {
 
+            sortQuery = { fee: -1 };
+        }
 
-
-
-        console.log("Generated MongoDB Sort Query:", sortQuery);
-
-        // Find all doctors with the query and sortQuery
         const result = await doctorsCollection
             .find(query)
             .sort(sortQuery)
             .toArray();
 
         res.json(result);
+
     } catch (error) {
-        res.status(500).send({ message: error.message });
+
+        res.status(500).send({
+            message: error.message
+        });
     }
 });
+
 // appointments data api //
 app.post('/bookings', async (req, res) => {
     try {
@@ -189,41 +187,6 @@ app.delete("/bookings/:id", async (req, res) => {
         });
     }
 });
-
-
-
-// app.delete("/bookings/:id", async (req, res) => {
-
-//     try {
-
-//         const { id } = req.params;
-
-//         let query = {};
-
-//         if (ObjectId.isValid(id)) {
-//             query = {
-//                 _id: new ObjectId(id)
-//             };
-//         }
-//         // } else {
-//         //     query = {
-//         //         _id: id
-//         //     };
-//         // }
-
-//         const result =
-//             await appointmentsCollection.deleteOne(query);
-
-//         res.json(result);
-
-//     } catch (error) {
-
-//         res.status(500).send({
-//             message: error.message
-//         });
-//     }
-// });
-
 
 
 
